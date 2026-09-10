@@ -18,7 +18,7 @@ _rembg_error: str = ""
 
 def is_rembg_available() -> Tuple[bool, str]:
     """
-    Check if rembg is importable.
+    Check if rembg is installed without loading heavy ML dependencies.
 
     Returns:
         (available: bool, reason: str)
@@ -29,19 +29,21 @@ def is_rembg_available() -> Tuple[bool, str]:
     if _rembg_available is not None:
         return _rembg_available, _rembg_error
 
+    import importlib.util
     try:
-        import rembg  # type: ignore[import]  # noqa: F401
-        _rembg_available = True
-        _rembg_error = ""
-        logger.info("rembg is available.")
-    except ImportError:
-        _rembg_available = False
-        _rembg_error = (
-            "rembg is not installed. "
-            "Install it with: pip install rembg[cpu]\n"
-            "AI background removal will be disabled."
-        )
-        logger.warning("rembg not available: %s", _rembg_error)
+        spec = importlib.util.find_spec("rembg")
+        if spec is not None:
+            _rembg_available = True
+            _rembg_error = ""
+            logger.info("rembg is available.")
+        else:
+            _rembg_available = False
+            _rembg_error = (
+                "rembg is not installed. "
+                "Install it with: pip install rembg[cpu]\n"
+                "AI background removal will be disabled."
+            )
+            logger.warning("rembg not available: %s", _rembg_error)
     except Exception as exc:
         _rembg_available = False
         _rembg_error = f"rembg failed to load: {exc}"
@@ -94,7 +96,8 @@ def remove_background(
     if cancel_event and cancel_event.is_set():
         raise RuntimeError("Processing was cancelled.")
 
-    return result
+    from typing import cast
+    return cast(bytes, result)
 
 
 def remove_background_pil(

@@ -13,11 +13,14 @@ Processing pipeline:
 import logging
 import re
 import subprocess
+import sys
 import threading
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
+
+_NO_WINDOW_FLAG = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 from config import (
     ANIMATED_QUALITY_STEPS,
@@ -373,6 +376,7 @@ def _run_ffmpeg_encode(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         shell=False,
+        creationflags=_NO_WINDOW_FLAG,
     )
 
     try:

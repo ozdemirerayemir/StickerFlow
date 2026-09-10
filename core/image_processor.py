@@ -13,7 +13,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from PIL import Image, ImageFilter, ImageOps
 
@@ -243,7 +243,7 @@ def _remove_background(img: Image.Image) -> Image.Image:
         img_bytes = io.BytesIO()
         img.save(img_bytes, format="PNG")
         img_bytes.seek(0)
-        result_bytes = rembg.remove(img_bytes.read())
+        result_bytes = cast(bytes, rembg.remove(img_bytes.read()))
         result = Image.open(io.BytesIO(result_bytes)).convert("RGBA")
     except ImageProcessingError:
         raise

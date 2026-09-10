@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -15,6 +16,8 @@ from typing import Optional
 from core.ffmpeg_helper import find_ffmpeg, find_ffprobe
 
 logger = logging.getLogger("stickerflow.ffprobe")
+
+_NO_WINDOW_FLAG = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
 @dataclass
@@ -107,6 +110,7 @@ def _read_via_ffprobe(path: Path, ffprobe_bin: str) -> VideoMetadata:
         capture_output=True,
         timeout=30,
         shell=False,
+        creationflags=_NO_WINDOW_FLAG,
     )
     if result.returncode != 0:
         raise FFprobeError(
@@ -205,6 +209,7 @@ def _read_via_ffmpeg_fallback(path: Path, ffmpeg_bin: str) -> VideoMetadata:
         capture_output=True,
         timeout=30,
         shell=False,
+        creationflags=_NO_WINDOW_FLAG,
     )
     stderr = result.stderr.decode("utf-8", errors="replace")
 

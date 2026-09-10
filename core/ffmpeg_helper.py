@@ -7,11 +7,14 @@ Supports timeout and process cancellation.
 import logging
 import shutil
 import subprocess
+import sys
 import threading
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger("stickerflow.ffmpeg")
+
+_NO_WINDOW_FLAG = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 # FFmpeg capability probe: a tiny 1-frame WebP encode to verify libwebp support.
 _PROBE_FILTER = (
@@ -134,6 +137,7 @@ def run_ffmpeg(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE if capture_stderr else subprocess.DEVNULL,
             shell=False,  # NEVER True — security requirement
+            creationflags=_NO_WINDOW_FLAG,
         )
     except FileNotFoundError as exc:
         raise FFmpegNotFoundError(f"FFmpeg binary not found: {exc}") from exc
@@ -207,6 +211,7 @@ def check_webp_support(ffmpeg_path: str = "") -> dict[str, bool]:
             text=True,
             timeout=10,
             shell=False,
+            creationflags=_NO_WINDOW_FLAG,
         )
         caps["ffmpeg_ok"] = result.returncode == 0
         caps["libwebp"] = "libwebp" in result.stdout
@@ -236,6 +241,7 @@ def check_webp_support(ffmpeg_path: str = "") -> dict[str, bool]:
                 capture_output=True,
                 timeout=15,
                 shell=False,
+                creationflags=_NO_WINDOW_FLAG,
             )
             caps["animated_webp"] = proc.returncode == 0 and probe_out.exists()
         except Exception as exc:
@@ -261,6 +267,7 @@ def check_webp_support(ffmpeg_path: str = "") -> dict[str, bool]:
                     capture_output=True,
                     timeout=15,
                     shell=False,
+                    creationflags=_NO_WINDOW_FLAG,
                 )
                 caps["alpha_webp"] = proc.returncode == 0 and probe_out.exists()
             except Exception as exc:
