@@ -22,9 +22,9 @@ if errorlevel 1 (
 )
 
 :: 2. Set up virtual environment if missing
-if not exist ".venv" (
-    echo [1/3] Creating virtual environment (.venv)...
-    python -m venv .venv
+if not exist "%~dp0.venv" (
+    echo [1/3] Setting up virtual environment...
+    python -m venv "%~dp0.venv"
     if errorlevel 1 (
         echo [ERROR] Failed to create virtual environment.
         pause
