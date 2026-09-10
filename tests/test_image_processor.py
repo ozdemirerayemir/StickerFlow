@@ -106,6 +106,28 @@ class TestApplyStroke:
         px = result.getpixel((15, 25))  # left of subject
         assert isinstance(px, tuple) and px[3] > 0, "Stroke should add non-transparent pixels near subject edge."
 
+    def test_stroke_custom_color(self):
+        """Stroke with custom color should paint that color."""
+        img = Image.new("RGBA", (50, 50), (0, 0, 0, 0))
+        for x in range(20, 30):
+            for y in range(20, 30):
+                img.putpixel((x, y), (255, 255, 255, 255))
+        yellow = (255, 215, 0, 255)
+        result = _apply_stroke(img, stroke_width=4, color=yellow)
+        px = result.getpixel((15, 25))
+        assert isinstance(px, tuple) and px[3] > 0
+        assert px[0] > 150 and px[1] > 100
+
+    def test_apply_text_overlay(self):
+        """Text overlay draws text onto the image."""
+        from core.image_processor import _apply_text_overlay
+        img = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+        result = _apply_text_overlay(img, "Test Text", position="bottom")
+        assert result.size == (512, 512)
+        pixels = [result.getpixel((x, 480)) for x in range(100, 400)]
+        has_pixels = any(isinstance(p, tuple) and p[3] > 0 for p in pixels)
+        assert has_pixels
+
 
 # ── _compress_webp ────────────────────────────────────────────────────────────
 

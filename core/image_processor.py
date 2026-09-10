@@ -39,7 +39,10 @@ class ProcessingOptions:
     canvas_size: int = 512
     safe_area_size: int = 480
     padding_px: int = 16
-    stroke_width: int = 3          # used in Mode 3 (2–4 px)
+    stroke_width: int = 4          # used in Mode 3 (1–15 px)
+    stroke_color: tuple[int, int, int, int] = (255, 255, 255, 255)  # RGBA
+    text_overlay: str = ""         # optional text overlay
+    text_position: str = "bottom"  # "top" or "bottom"
     max_file_kb: int = 100
     apply_safe_area: bool = True   # pad content to safe_area_size
 
@@ -128,10 +131,14 @@ def process_image(
             _progress(0.2)
             img = _remove_background(img)
             _check_cancel()
-            _status("Adding white stroke…")
+            _status("Adding stroke…")
             _progress(0.5)
-            img = _apply_stroke(img, options.stroke_width)
+            img = _apply_stroke(img, options.stroke_width, options.stroke_color)
             img = _fit_to_canvas(img, options)
+
+        if options.text_overlay:
+            _status("Adding text overlay…")
+            img = _apply_text_overlay(img, options.text_overlay, options.text_position)
 
         _check_cancel()
         _progress(0.65, "Encoding WebP…")
@@ -281,17 +288,21 @@ def _clean_alpha_edges(img: Image.Image, threshold: int = 10) -> Image.Image:
 def _apply_stroke(
     img: Image.Image,
     stroke_width: int = 3,
+    color: tuple[int, int, int, int] = (255, 255, 255, 255),
 ) -> Image.Image:
     """
-    Add a white stroke around the subject's alpha mask.
+    Add a colored stroke around the subject's alpha mask.
 
     Strategy:
     1. Extract alpha channel.
     2. Dilate alpha by stroke_width using MaxFilter.
     3. Blur slightly for anti-aliasing.
-    4. Build white stroke layer from dilated alpha.
-    5. Composite: white_stroke behind original image.
+    4. Build stroke layer from dilated alpha with requested color.
+    5. Composite: stroke behind original image.
     """
+    if stroke_width <= 0:
+        return img
+
     from PIL import ImageFilter
 
     if img.mode != "RGBA":
@@ -307,14 +318,88 @@ def _apply_stroke(
     # Light Gaussian blur for anti-aliasing
     dilated_a = dilated_a.filter(ImageFilter.GaussianBlur(radius=0.8))
 
-    # Build a white stroke layer
-    stroke_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
-    white_solid = Image.new("RGBA", img.size, (255, 255, 255, 255))
-    stroke_layer.paste(white_solid, mask=dilated_a)
+    # Build stroke layer with selected color
+    stroke_layer = Image.new("RGBA", img.size, (color[0], color[1], color[2], 0))
+    solid = Image.new("RGBA", img.size, color)
+    stroke_layer.paste(solid, mask=dilated_a)
 
     # Composite: stroke behind original
     result = Image.alpha_composite(stroke_layer, img)
     return result
+
+
+def _apply_text_overlay(
+    img: Image.Image,
+    text: str,
+    position: str = "bottom",
+) -> Image.Image:
+    """
+    Draw bold, high-contrast text overlay (meme/sticker style) with black stroke.
+    """
+    if not text or not text.strip():
+        return img
+
+    from PIL import ImageDraw, ImageFont
+
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+
+    txt_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(txt_layer)
+
+    text = text.strip()
+    img_w, img_h = img.size
+
+    target_font_size = max(24, int(img_w * 0.08))
+    font = None
+    for fn in ["arialbd.ttf", "impact.ttf", "segoeuib.ttf", "Arial Bold.ttf", "arial.ttf"]:
+        try:
+            font = ImageFont.truetype(fn, size=target_font_size)
+            break
+        except Exception:
+            continue
+    if font is None:
+        try:
+            font = ImageFont.load_default(size=target_font_size)
+        except Exception:
+            font = ImageFont.load_default()
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+
+    if text_w > img_w * 0.9 and hasattr(font, "size"):
+        scale_factor = (img_w * 0.9) / max(1, text_w)
+        new_size = max(16, int(target_font_size * scale_factor))
+        try:
+            font_path = getattr(font, "path", None)
+            if font_path:
+                font = ImageFont.truetype(font_path, size=new_size)
+            else:
+                font = ImageFont.load_default(size=new_size)
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+        except Exception:
+            pass
+
+    x = (img_w - text_w) // 2
+    if position == "top":
+        y = int(img_h * 0.06)
+    else:
+        y = int(img_h * 0.94 - text_h)
+
+    stroke_width = max(2, int(target_font_size * 0.08))
+    draw.text(
+        (x, y),
+        text,
+        font=font,
+        fill=(255, 255, 255, 255),
+        stroke_width=stroke_width,
+        stroke_fill=(0, 0, 0, 255),
+    )
+
+    return Image.alpha_composite(img, txt_layer)
 
 
 def _compress_webp(

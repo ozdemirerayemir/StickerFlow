@@ -27,6 +27,8 @@ from config import (
     STROKE_WIDTH_OPTIONS,
     SUPPORTED_IMAGE_EXTENSIONS,
 )
+
+_NO_WINDOW_FLAG = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 from core.ffmpeg_helper import FFmpegNotFoundError, check_webp_support, find_ffmpeg
 from core.image_processor import ProcessingMode, ProcessingOptions, process_image
 from core.settings import UserSettings
@@ -262,7 +264,7 @@ class StickerFlowApp:
             )
             rb.grid(row=i + 1, column=0, sticky="w", pady=2)
 
-        # Stroke width
+        # Stroke width slider
         self._stroke_frame = ctk.CTkFrame(
             self._img_settings, fg_color="transparent"
         )
@@ -272,19 +274,130 @@ class StickerFlowApp:
             text="Stroke width:",
             font=FONTS["body"],
             text_color=COLORS["text_secondary"],
+        ).pack(side="left", padx=(PAD["lg"], PAD["xs"]))
+        self._stroke_var = tk.IntVar(value=4)
+        self._stroke_label = ctk.CTkLabel(
+            self._stroke_frame,
+            text="4 px",
+            font=FONTS["body_bold"],
+            text_color=COLORS["accent"],
+            width=35,
+        )
+
+        def _on_stroke_slider(val):
+            ival = int(round(val))
+            self._stroke_var.set(ival)
+            self._stroke_label.configure(text=f"{ival} px")
+
+        self._stroke_slider = ctk.CTkSlider(
+            self._stroke_frame,
+            from_=1,
+            to=12,
+            number_of_steps=11,
+            command=_on_stroke_slider,
+            width=135,
+            fg_color=COLORS["bg_input"],
+            progress_color=COLORS["accent"],
+            button_color=COLORS["accent"],
+            button_hover_color=COLORS["accent_hover"],
+        )
+        self._stroke_slider.set(4)
+        self._stroke_slider.pack(side="left", padx=PAD["xs"])
+        self._stroke_label.pack(side="left", padx=PAD["xs"])
+
+        # Stroke color palette
+        self._color_frame = ctk.CTkFrame(
+            self._img_settings, fg_color="transparent"
+        )
+        self._color_frame.grid(row=5, column=0, sticky="w", pady=(PAD["xs"], 0))
+        ctk.CTkLabel(
+            self._color_frame,
+            text="Stroke color:",
+            font=FONTS["body"],
+            text_color=COLORS["text_secondary"],
         ).pack(side="left", padx=(PAD["lg"], PAD["sm"]))
-        self._stroke_var = tk.IntVar(value=3)
-        for w in STROKE_WIDTH_OPTIONS:
-            ctk.CTkRadioButton(
-                self._stroke_frame,
-                text=f"{w}px",
-                variable=self._stroke_var,
-                value=w,
-                font=FONTS["small"],
-                text_color=COLORS["text_primary"],
-                fg_color=COLORS["accent"],
-                hover_color=COLORS["accent_hover"],
-            ).pack(side="left", padx=PAD["sm"])
+
+        self._selected_stroke_color: tuple[int, int, int, int] = (255, 255, 255, 255)
+        self._color_buttons: list[ctk.CTkButton] = []
+
+        COLOR_PRESETS = [
+            ("White", (255, 255, 255, 255), "#FFFFFF"),
+            ("Black", (0, 0, 0, 255), "#0F172A"),
+            ("Yellow", (255, 215, 0, 255), "#EAB308"),
+            ("Red", (239, 68, 68, 255), "#EF4444"),
+            ("Green", (34, 197, 94, 255), "#22C55E"),
+            ("Cyan", (6, 182, 212, 255), "#06B6D4"),
+        ]
+
+        def _select_color(c_tuple, btn):
+            self._selected_stroke_color = c_tuple
+            for b in self._color_buttons:
+                b.configure(border_width=0)
+            btn.configure(border_width=2, border_color=COLORS["accent"])
+
+        for name, c_rgba, hex_val in COLOR_PRESETS:
+            c_btn = ctk.CTkButton(
+                self._color_frame,
+                text="",
+                width=24,
+                height=24,
+                corner_radius=12,
+                fg_color=hex_val,
+                hover_color=hex_val,
+                border_width=2 if c_rgba == (255, 255, 255, 255) else 0,
+                border_color=COLORS["accent"],
+            )
+            c_btn.configure(command=lambda c=c_rgba, b=c_btn: _select_color(c, b))
+            c_btn.pack(side="left", padx=3)
+            Tooltip(c_btn, name)
+            self._color_buttons.append(c_btn)
+
+        # Hide stroke controls initially (default mode is keep)
+        self._stroke_frame.grid_remove()
+        self._color_frame.grid_remove()
+
+        # Text Overlay section
+        self._text_frame = ctk.CTkFrame(self._img_settings, fg_color="transparent")
+        self._text_frame.grid(row=6, column=0, sticky="ew", pady=(PAD["xs"], 0))
+
+        self._text_overlay_var = tk.BooleanVar(value=False)
+        self._text_check = ctk.CTkCheckBox(
+            self._text_frame,
+            text="Add text overlay (meme / sticker text)",
+            variable=self._text_overlay_var,
+            font=FONTS["small"],
+            text_color=COLORS["text_secondary"],
+            fg_color=COLORS["accent"],
+            hover_color=COLORS["accent_hover"],
+            command=self._on_text_toggle,
+        )
+        self._text_check.pack(anchor="w", pady=(PAD["xs"], PAD["xs"]))
+
+        self._text_inputs_frame = ctk.CTkFrame(self._text_frame, fg_color="transparent")
+        self._text_val_var = tk.StringVar(value="")
+        self._text_entry = ctk.CTkEntry(
+            self._text_inputs_frame,
+            textvariable=self._text_val_var,
+            placeholder_text="e.g. Günaydın! or Meme text",
+            width=230,
+            fg_color=COLORS["bg_input"],
+            border_color=COLORS["border"],
+            font=FONTS["body"],
+        )
+        self._text_entry.pack(side="left", padx=(PAD["md"], PAD["sm"]))
+
+        self._text_pos_var = tk.StringVar(value="bottom")
+        self._text_pos_seg = ctk.CTkSegmentedButton(
+            self._text_inputs_frame,
+            values=["Bottom", "Top"],
+            variable=self._text_pos_var,
+            font=FONTS["small"],
+            width=100,
+            selected_color=COLORS["accent"],
+            selected_hover_color=COLORS["accent_hover"],
+        )
+        self._text_pos_seg.set("Bottom")
+        self._text_pos_seg.pack(side="left")
 
         # Safe area toggle
         self._safe_area_var = tk.BooleanVar(value=True)
@@ -296,7 +409,7 @@ class StickerFlowApp:
             text_color=COLORS["text_secondary"],
             fg_color=COLORS["accent"],
             hover_color=COLORS["accent_hover"],
-        ).grid(row=5, column=0, sticky="w", pady=(PAD["sm"], PAD["md"]))
+        ).grid(row=7, column=0, sticky="w", pady=(PAD["sm"], PAD["md"]))
 
         # --- Video settings (hidden until video is loaded) ---
         self._video_settings = ctk.CTkFrame(
@@ -671,6 +784,7 @@ class StickerFlowApp:
                     [ffmpeg_bin, "-y", "-i", str(path), "-vframes", "1",
                      "-q:v", "2", str(thumb_path)],
                     capture_output=True, timeout=10, shell=False,
+                    creationflags=_NO_WINDOW_FLAG,
                 )
                 if thumb_path.exists():
                     img = Image.open(thumb_path).copy()
@@ -682,14 +796,22 @@ class StickerFlowApp:
 
     # ── Mode Change ───────────────────────────────────────────────────────────
 
+    def _on_text_toggle(self) -> None:
+        if self._text_overlay_var.get():
+            self._text_inputs_frame.pack(fill="x", pady=(2, PAD["xs"]))
+        else:
+            self._text_inputs_frame.pack_forget()
+
     def _on_mode_changed(self) -> None:
         mode = self._mode_var.get()
         is_stroke = mode == "stroke"
-        # Show/hide stroke width selector
+        # Show/hide stroke controls
         if is_stroke:
             self._stroke_frame.grid()
+            self._color_frame.grid()
         else:
             self._stroke_frame.grid_remove()
+            self._color_frame.grid_remove()
 
     def _toggle_safe_area_guide(self) -> None:
         show = self._safe_area_check.cget("variable").get()
@@ -751,6 +873,7 @@ class StickerFlowApp:
             "remove": ProcessingMode.REMOVE_BACKGROUND,
             "stroke": ProcessingMode.REMOVE_BACKGROUND_STROKE,
         }
+        text_overlay = self._text_val_var.get() if self._text_overlay_var.get() else ""
         return {
             "options": ProcessingOptions(
                 mode=mode_map[self._mode_var.get()],
@@ -758,6 +881,9 @@ class StickerFlowApp:
                 safe_area_size=targets["safe_area_size"],
                 padding_px=targets["padding_px"],
                 stroke_width=self._stroke_var.get(),
+                stroke_color=self._selected_stroke_color,
+                text_overlay=text_overlay,
+                text_position=self._text_pos_var.get().lower(),
                 max_file_kb=targets["static_max_kb"],
                 apply_safe_area=self._safe_area_var.get(),
             ),
@@ -968,6 +1094,7 @@ class StickerFlowApp:
                 subprocess.run(
                     ["explorer", "/select,", str(self._output_path)],
                     shell=False,
+                    creationflags=_NO_WINDOW_FLAG,
                 )
             elif sys_ == "Darwin":
                 subprocess.run(

@@ -20,9 +20,10 @@ It is a **local-only sticker asset producer**. It does not automate WhatsApp, se
 - Converts static images (PNG, JPG, WEBP, BMP) into 512×512 WebP sticker files
 - Converts short videos (MP4, MOV, WEBM, GIF) into 512×512 animated WebP sticker files
 - Optional AI background removal (powered by rembg)
-- Optional white stroke outline around the subject
-- Iterative compression to meet WhatsApp size targets
-- Output validation with clear status badges (OK / WARNING / LIMIT EXCEEDED)
+- Configurable stroke outline with slider (1–12px) and color palette (White, Black, Yellow, Red, Green, Cyan)
+- Optional text overlay (meme / sticker text) with high-contrast outline
+- Iterative compression to meet WhatsApp size targets (<100 KB static, <500 KB video)
+- Output validation with clear status badges and quick "Show in Folder" action
 
 ---
 
@@ -37,52 +38,27 @@ It is a **local-only sticker asset producer**. It does not automate WhatsApp, se
 
 ---
 
-## 4. Quick Start (Plug & Play)
-
-StickerFlow includes one-click launcher scripts that automatically set up a virtual environment, install dependencies, and launch the application.
-
-### Windows
-Double-click [`run.bat`](run.bat) or run from PowerShell:
-```cmd
-.\run.bat
-```
-
-### macOS / Linux
-Run the launch script from terminal:
-```bash
-chmod +x run.sh
-./run.sh
-```
-
----
-
-## 5. Manual Installation
-
-If you prefer to set up your environment manually:
+## 4. Quick Start
 
 ### Prerequisites
 - Python 3.10 or newer
 
-### Setup
+### Setup & Launch
 ```bash
 # 1. Clone repository
 git clone https://github.com/ozdemirerayemir/StickerFlow.git
 cd StickerFlow
 
-# 2. Create virtual environment (recommended)
-python -m venv .venv
-source .venv/bin/activate   # On Windows: .venv\Scripts\activate
-
-# 3. Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 4. Run application
+# 3. Run application
 python main.py
 ```
 
 ---
 
-## 6. FFmpeg Setup
+## 5. FFmpeg Setup
 
 Video sticker processing requires FFmpeg. See [`docs/FFMPEG_SETUP.md`](docs/FFMPEG_SETUP.md) for platform-specific installation instructions.
 
@@ -95,7 +71,7 @@ If FFmpeg is not in your PATH, launch StickerFlow and use **Settings → Set FFm
 
 ---
 
-## 7. rembg Model Setup
+## 6. rembg Model Setup
 
 AI background removal uses the `u2net` model (~170 MB). On first use, StickerFlow will:
 1. Ask for your consent before downloading
@@ -106,20 +82,25 @@ If you do not want to use AI background removal, choose **Keep Background** mode
 
 ---
 
-## 8. Static Sticker Production
+## 7. Static Sticker Production
 
 1. Drop or select an image (PNG, JPG, WEBP, BMP)
 2. Choose a processing mode:
    - **Keep Background** — fit image in a 512×512 transparent canvas
    - **AI Background Removal** — remove background, fit in canvas
-   - **AI Removal + White Stroke** — remove background, add white outline
-3. Optionally adjust stroke width (2–4 px) and safe area padding
+   - **AI Removal + Stroke** — remove background, add outline
+3. Optionally adjust:
+   - **Stroke width** (1–12 px slider)
+   - **Stroke color** (White, Black, Yellow, Red, Green, Cyan)
+   - **Text overlay** (meme / sticker text, top or bottom)
+   - **Safe area padding** (recommended for WhatsApp round bubbles)
 4. Click **Create Sticker**
 5. Output is saved to `~/StickerFlow Output/` by default
+6. Click **Show in Folder** to reveal the file in Windows Explorer, or **Copy to Clipboard**
 
 ---
 
-## 9. Video Sticker Production
+## 8. Video Sticker Production
 
 1. Drop or select a video (MP4, MOV, WEBM, GIF)
 2. Set start and end times (maximum 3 seconds)
@@ -131,7 +112,7 @@ If you do not want to use AI background removal, choose **Keep Background** mode
 
 ---
 
-## 10. Clipboard Feature & Limitations
+## 9. Clipboard Feature & Limitations
 
 Static stickers can be copied to the clipboard as PNG.
 
@@ -146,7 +127,7 @@ If clipboard is unavailable, the button is disabled with an explanation.
 
 ---
 
-## 11. WhatsApp Manual Import
+## 10. WhatsApp Manual Import
 
 See [`docs/WHATSAPP_MANUAL_IMPORT_GUIDE.md`](docs/WHATSAPP_MANUAL_IMPORT_GUIDE.md) for step-by-step guidance on transferring sticker assets to WhatsApp.
 
@@ -154,7 +135,7 @@ See [`docs/WHATSAPP_MANUAL_IMPORT_GUIDE.md`](docs/WHATSAPP_MANUAL_IMPORT_GUIDE.m
 
 ---
 
-## 12. Running Tests
+## 11. Running Tests
 
 ```bash
 python -m pytest tests/ -v
@@ -164,17 +145,13 @@ No real media files required — tests generate synthetic images at runtime.
 
 ---
 
-## 13. Building a Distributable
+## 12. Building a Distributable
 
-See [`build_scripts/`](build_scripts/) for platform build scripts.
-
-> **Note:** A single-click distributable is not guaranteed on all platforms.
-> FFmpeg and rembg model packaging require additional validation.
-> See [PyInstaller notes in the build scripts](build_scripts/).
+See [`build_scripts/`](build_scripts/) for Windows PyInstaller build configuration.
 
 ---
 
-## 14. Known Limitations
+## 13. Known Limitations
 
 - AI background removal is not available for video clips
 - rembg model download requires internet on first use (~170 MB)
@@ -184,7 +161,7 @@ See [`build_scripts/`](build_scripts/) for platform build scripts.
 
 ---
 
-## 15. FAQ
+## 14. FAQ
 
 **Q: Does StickerFlow upload my images anywhere?**
 A: No. All processing is local. No data is sent to any server.
@@ -200,7 +177,7 @@ A: No. This is intentionally out of scope. StickerFlow only produces the asset f
 
 ---
 
-## 16. Legal Notice
+## 15. Legal Notice
 
 Only use content you have the right to use. This application is not officially affiliated with WhatsApp. It only produces sticker-compatible media assets.
 
