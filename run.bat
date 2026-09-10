@@ -46,11 +46,9 @@ if errorlevel 1 (
 
 :: 5. Launch Application
 echo [3/3] Launching StickerFlow...
-echo.
-python main.py
-
-if errorlevel 1 (
-    echo.
-    echo [ERROR] StickerFlow encountered an error.
-    pause
+if exist "%~dp0.venv\Scripts\pythonw.exe" (
+    start "" "%~dp0.venv\Scripts\pythonw.exe" "%~dp0main.py"
+) else (
+    start "" pythonw "%~dp0main.py" 2>nul || start "" python "%~dp0main.py"
 )
+exit /b 0
