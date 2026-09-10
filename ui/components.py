@@ -76,9 +76,10 @@ class PreviewCanvas(ctk.CTkFrame):
             return
 
         # Scale image to fit canvas while preserving aspect ratio
-        thumb = pil_image.copy()
+        thumb = pil_image.convert("RGBA").copy()
         thumb.thumbnail((self._size, self._size), Image.Resampling.LANCZOS)
-        self._tk_image = ImageTk.PhotoImage(thumb)
+        self._tk_image = ImageTk.PhotoImage(thumb, master=self._canvas)
+        setattr(self._canvas, "image", self._tk_image)  # Keep reference to prevent GC
         x = self._size // 2
         y = self._size // 2
         self._canvas.create_image(x, y, anchor="center", image=self._tk_image, tags="preview")

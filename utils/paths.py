@@ -37,8 +37,15 @@ def get_log_dir() -> Path:
 
 
 def get_default_output_dir() -> Path:
-    """Return the default sticker output directory (~/StickerFlow Output)."""
-    output_dir = Path.home() / "StickerFlow Output"
+    """Return the default sticker output directory (~/Downloads/Stickers)."""
+    if sys.platform == "win32":
+        import os
+        user_profile = Path(os.environ.get("USERPROFILE", Path.home()))
+        downloads = user_profile / "Downloads"
+        output_dir = (downloads if downloads.exists() else user_profile) / "Stickers"
+    else:
+        downloads = Path.home() / "Downloads"
+        output_dir = (downloads if downloads.exists() else Path.home()) / "Stickers"
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
 

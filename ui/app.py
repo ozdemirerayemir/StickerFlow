@@ -174,6 +174,21 @@ class StickerFlowApp:
             text_color=COLORS["text_muted"],
         ).pack(side="left", padx=(PAD["sm"], 0), pady=(6, 0))
 
+        open_folder_btn = ctk.CTkButton(
+            top,
+            text="📂 Stickers Folder",
+            font=FONTS["small"],
+            fg_color=COLORS["bg_input"],
+            hover_color=COLORS["bg_panel_hover"],
+            border_width=1,
+            border_color=COLORS["border"],
+            corner_radius=RADIUS["pill"],
+            height=28,
+            command=self._open_output_dir,
+        )
+        open_folder_btn.pack(side="right")
+        Tooltip(open_folder_btn, "Open Stickers folder in File Explorer")
+
         ctk.CTkLabel(
             card,
             text="WhatsApp-Compatible Sticker Asset Studio",
@@ -1084,8 +1099,22 @@ class StickerFlowApp:
 
     # ── Result Actions ────────────────────────────────────────────────────────
 
+    def _open_output_dir(self) -> None:
+        folder = self._settings.get_output_dir()
+        folder.mkdir(parents=True, exist_ok=True)
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(folder))
+            elif sys.platform == "darwin":
+                subprocess.run(["open", str(folder)], shell=False)
+            else:
+                subprocess.run(["xdg-open", str(folder)], shell=False)
+        except Exception as exc:
+            logger.warning("Could not open output folder: %s", exc)
+
     def _show_in_folder(self) -> None:
         if not self._output_path or not self._output_path.exists():
+            self._open_output_dir()
             return
         folder = str(self._output_path.parent)
         sys_ = platform.system()
