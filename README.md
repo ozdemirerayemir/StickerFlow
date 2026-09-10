@@ -66,7 +66,7 @@ If you prefer to set up your environment manually:
 ### Setup
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-username/StickerFlow.git
+git clone https://github.com/ozdemirerayemir/StickerFlow.git
 cd StickerFlow
 
 # 2. Create virtual environment (recommended)
